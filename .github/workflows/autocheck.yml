@@ -37,18 +37,28 @@ jobs:
           echo "✅ Detected module: $MODULE"
           echo "MODULE=$MODULE" >> $GITHUB_ENV
 
-      # 3. Setup Node.js
+      # 3. Generate GitHub App token for private repo access
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: rsksmart
+          repositories: rsk-devcourse-assestments-internal
+
+      # 4. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 #v4.4.0
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
 
-      # 4. Download the official template and tests & inject student contracts 
+      # 5. Download the official template and tests & inject student contracts 
       - name: Assemble module project and validate contracts
         run: |
-          echo "🔧 Cloning official template repo..."
-          git clone https://${{ secrets.TESTS_REPO_TOKEN }}@github.com/rsksmart/rsk-devcourse-assestments-internal tmp_template
+          echo "🔧 Cloning official template repo using GitHub App..."
+          git clone https://x-access-token:${{ steps.generate_token.outputs.token }}@github.com/rsksmart/rsk-devcourse-assestments-internal tmp_template
 
           echo "📁 Copying module ${MODULE} to working directory..."
           cp -r tmp_template/${MODULE} project
@@ -84,7 +94,7 @@ jobs:
 
           echo "✅ Contract validation passed."
 
-      # 5. Install dependencies,run tests & capture output in a file
+      # 6. Install dependencies,run tests & capture output in a file
       - name: Run tests (Hardhat + Foundry)
         run: |
           echo "📁 Creating reports directory"
@@ -108,7 +118,7 @@ jobs:
             cd ..
           fi
           
-      # 6. Post detailed feedback as a PR comment (last 50 log lines)
+      # 7. Post detailed feedback as a PR comment (last 50 log lines)  
       - name: Post detailed feedback (Hardhat + Foundry)
         if: always()
         uses: actions/github-script@v7 # TODO Replace with specifica commit
@@ -185,7 +195,7 @@ jobs:
             });
             console.log('🔔 Comment posted successfully');
 
-      #7. Update Thinkific if all tests passed and mark course as completed 
+      #8. Update Thinkific if all tests passed and mark course as completed 
       # - name: Update Thinkific if all tests passed
       #   if: success()
       #   run: |
@@ -213,7 +223,7 @@ jobs:
       #         ;;
       #     esac
       
-      #     # 7C. Mark course as completed
+      #     # 8C. Mark course as completed
       #     curl -X POST "https://api.thinkific.com/api/public/v1/enrollments" \
       #       -H "X-Auth-API-Key: ${{ secrets.THINKIFIC_API_KEY }}" \
       #       -H "X-Auth-Subdomain: ${{ secrets.THINKIFIC_SUBDOMAIN }}" \
